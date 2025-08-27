@@ -1,0 +1,15 @@
+kafka:
+  broker_address: "kafka:9092"
+  group_id: "order-service-group"
+  topic: "orders"
+
+postgres:
+  host: "localhost"
+  port: "5432"
+  user: "user1"
+  password: "123456789"
+  dbname: "l0wb"
+
+http:
+  host: ""
+  port: "8080"

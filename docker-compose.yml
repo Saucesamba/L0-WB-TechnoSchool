@@ -1,17 +1,5 @@
 version: "3.9"
 services:
-  postgres:
-    image: postgres:latest
-    environment:
-      POSTGRES_DB: "wb_l0"
-      POSTGRES_USER: "user"
-      POSTGRES_PASSWORD: "123456789"
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
     container_name: zookeeper
