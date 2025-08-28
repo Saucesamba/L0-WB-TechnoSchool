@@ -100,7 +100,6 @@ func (w *WbDB) CreateOrder(ctx context.Context, order *models.Order) error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	log.Printf("Order %s created successfully", order.OrderUID)
 	return nil
 }
 
@@ -188,4 +187,107 @@ func (w *WbDB) GetOrder(ctx context.Context, orderUID string) (*models.Order, er
 		return nil, fmt.Errorf("failed to iterate items: %w", err)
 	}
 	return order, nil
+}
+
+// получает последние 100 заказов
+func (w *WbDB) GetLastOrders(ctx context.Context) ([]*models.Order, error) {
+	sqlStatement := `
+        SELECT order_uid, track_number, entry, locale, internal_signature, customer_id,
+        delivery_service, shardkey, sm_id, date_created, oof_shard
+        FROM orders
+        LIMIT 100
+    `
+	rows, err := w.QueryContext(ctx, sqlStatement)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders from database: %w", err)
+	}
+	defer rows.Close()
+
+	orders := []*models.Order{}
+	for rows.Next() {
+		order := &models.Order{}
+		err := rows.Scan(
+			&order.OrderUID, &order.TrackNumber, &order.Entry, &order.Locale, &order.InternalSignature,
+			&order.CustomerID, &order.DeliveryService, &order.Shardkey, &order.SmID, &order.DateCreated, &order.OofShard,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan order: %w", err)
+		}
+
+		err = w.populateRelatedData(ctx, order)
+		if err != nil {
+			return nil, fmt.Errorf("failed to populate related data for order %s: %w", order.OrderUID, err)
+		}
+
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate rows: %w", err)
+	}
+
+	return orders, nil
+}
+
+// получает связанные данные последних 100 заказов
+func (w *WbDB) populateRelatedData(ctx context.Context, order *models.Order) error {
+	sqlStatement := `
+		SELECT fio, phone, zip, city, address, region, email
+		FROM delivery
+		WHERE order_uid = $1
+		
+	`
+	row := w.QueryRowContext(ctx, sqlStatement, order.OrderUID)
+	err := row.Scan(
+		&order.Delivery.Name, &order.Delivery.Phone, &order.Delivery.Zip, &order.Delivery.City,
+		&order.Delivery.Address, &order.Delivery.Region, &order.Delivery.Email,
+	)
+
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to get delivery info: %w", err)
+	}
+
+	sqlStatement = `
+		SELECT transaction_number, request_id, currency, provider, amount, payment_dt, bank, delivery_cost, goods_total, custom_fee
+		FROM payment
+		WHERE order_uid = $1
+	`
+	row = w.QueryRowContext(ctx, sqlStatement, order.OrderUID)
+	err = row.Scan(
+		&order.Payment.TransactionNumber, &order.Payment.RequestID, &order.Payment.Currency,
+		&order.Payment.Provider, &order.Payment.Amount, &order.Payment.PaymentDT, &order.Payment.Bank,
+		&order.Payment.DeliveryCost, &order.Payment.GoodsTotal, &order.Payment.CustomFee,
+	)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to get payment info: %w", err)
+	}
+
+	sqlStatement = `
+		SELECT chrt_id, track_number, price, rid, item_name, sale, item_size, total_price, nm_id, brand, status
+		FROM items
+		WHERE order_uid = $1
+	`
+	rows, err := w.QueryContext(ctx, sqlStatement, order.OrderUID)
+	if err != nil {
+		return fmt.Errorf("failed to get items: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		item := models.Item{}
+		err = rows.Scan(
+			&item.ChrtID, &item.TrackNumber, &item.Price, &item.RID, &item.ItemName,
+			&item.Sale, &item.ItemSize, &item.TotalPrice, &item.NmID, &item.Brand, &item.Status,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to scan item: %w", err)
+		}
+		order.Items = append(order.Items, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("failed to iterate items: %w", err)
+	}
+
+	return nil
 }

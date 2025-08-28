@@ -11,7 +11,6 @@ func main() {
 	if err := application.Initialize(); err != nil {
 		log.Fatalf("Failed to initialize app: %v\n", err)
 	}
-
 	if err := application.Start(); err != nil {
 		log.Fatalf("Failed to run app: %v\n", err)
 	}

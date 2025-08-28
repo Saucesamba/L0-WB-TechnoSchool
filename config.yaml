@@ -1,5 +1,5 @@
 kafka:
-  broker_address: "kafka:9092"
+  broker_address: "localhost:29092"
   group_id: "order-service-group"
   topic: "orders"
 

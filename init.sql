@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS delivery (
     order_uid VARCHAR(255) PRIMARY KEY REFERENCES orders(order_uid) ON DELETE CASCADE,
     fio VARCHAR(255),
-    phone VARCHAR(20),
-    zip VARCHAR(20),
+    phone VARCHAR(40),
+    zip VARCHAR(40),
     city VARCHAR(255),
     address VARCHAR(255),
     region VARCHAR(255),

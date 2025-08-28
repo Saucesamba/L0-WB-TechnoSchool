@@ -36,7 +36,6 @@ func (c *Consumer) ReadMessage(ctx context.Context) (kafka.Message, error) {
 }
 
 // закрывает Kafka-консьюмера
-// Пока что то не то вохможно тут
 func (c *Consumer) Close() error {
 	if err := c.reader.Close(); err != nil {
 		return fmt.Errorf("failed to close reader: %w", err)

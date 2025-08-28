@@ -1,10 +1,13 @@
 package app
 
 import (
+	"L0WB/internal/cache"
 	"L0WB/internal/config"
 	"L0WB/internal/db"
 	"L0WB/internal/kafka"
+	"L0WB/internal/models"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"log"
@@ -18,6 +21,7 @@ type App struct {
 	DB         db.Database
 	HTTPServer *http.Server
 	Consumer   *kafka.Consumer
+	Cache      cache.Cache
 }
 
 func NewApp() *App {
@@ -32,7 +36,7 @@ func (app *App) Initialize() error {
 	app.Config = cfg
 	//fmt.Println(app.Config)
 	log.Println("Waiting for database to start...")
-	time.Sleep(10 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	WbDB, err := new(db.WbDB).NewDB(&config.DBConfig{
 		Host:     app.Config.Postgres.Host,
@@ -45,12 +49,21 @@ func (app *App) Initialize() error {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 	app.DB = WbDB
-
 	kafkaConsumer, err := kafka.NewConsumer(app.Config.Kafka, app.DB)
 	if err != nil {
 		return fmt.Errorf("failed to create consumer: %w", err)
+	} else {
+		log.Println("Consumer created")
 	}
 	app.Consumer = kafkaConsumer
+
+	appCache := cache.NewLRUCache(100)
+	orders, err := app.loadOrdersFromDB(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to load orders from db: %w", err)
+	}
+	appCache.LoadAll(orders)
+	app.Cache = appCache
 
 	app.Router = mux.NewRouter()
 	app.setRouters()
@@ -58,6 +71,17 @@ func (app *App) Initialize() error {
 		Addr:    app.Config.HTTP.Host + ":" + app.Config.HTTP.Port,
 		Handler: app.Router,
 	}
+	return nil
+}
+
+func (app *App) Start() error {
+	go app.RunConsumer(context.Background())
+
+	log.Printf("Starting HTTP server on %s\n", app.HTTPServer.Addr)
+	if err := app.HTTPServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("failed to start HTTP server: %w", err)
+	}
+
 	return nil
 }
 
@@ -76,6 +100,12 @@ func (app *App) RunConsumer(ctx context.Context) {
 			err = app.Consumer.ProcessMessage(ctx, msg)
 			if err != nil {
 				log.Printf("Failed to process message: %v", err)
+			} else {
+				var order models.Order
+				err = json.Unmarshal(msg.Value, &order)
+				if err == nil {
+					app.Cache.Add(order.OrderUID, &order)
+				}
 			}
 		}
 	}
@@ -86,4 +116,12 @@ func (app *App) setRouters() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("API is running"))
 	})
+}
+
+func (app *App) loadOrdersFromDB(ctx context.Context) ([]*models.Order, error) {
+	orders, err := app.DB.GetLastOrders(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all orders from db: %w", err)
+	}
+	return orders, nil
 }
