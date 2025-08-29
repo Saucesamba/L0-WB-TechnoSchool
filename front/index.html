@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>Order Viewer</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f8f8f8; /* Light gray background */
+        }
+
+        h1 {
+            color: #9c27b0; /* Wildberries purple */
+            text-align: center;
+        }
+
+        div {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: inline-block;
+            width: 80px;
+            text-align: right;
+            margin-right: 10px;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        button {
+            background-color: #9c27b0; /* Wildberries purple */
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #7b1fa2; /* Darker purple on hover */
+        }
+
+        #order-details {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            border-radius: 4px;
+            background-color: #fff; /* White background for details */
+        }
+
+        #order-details.error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<h1>Order Viewer</h1>
+<div>
+    <label for="orderId">Order ID:</label>
+    <input type="text" id="orderId" name="orderId">
+    <button onclick="getOrder()">Get Order</button>
+</div>
+
+<div id="order-details">
+</div>
+<script>
+    async function getOrder() {
+        const orderId = document.getElementById('orderId').value;
+        const url = `http://localhost:8080/order/${orderId}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                document.getElementById('order-details').innerText = `Error: ${response.statusText}`;
+                return;
+            }
+
+            const data = await response.json();
+            document.getElementById('order-details').innerText = JSON.stringify(data, null, 2);
+        } catch (error) {
+            document.getElementById('order-details').innerText = `Error: ${error}`;
+        }
+    }
+</script>
+</body>
+</html>

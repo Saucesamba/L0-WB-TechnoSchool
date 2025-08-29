@@ -4,6 +4,7 @@ import (
 	"L0WB/internal/cache"
 	"L0WB/internal/config"
 	"L0WB/internal/db"
+	"L0WB/internal/handlers"
 	"L0WB/internal/kafka"
 	"L0WB/internal/models"
 	"context"
@@ -112,10 +113,14 @@ func (app *App) RunConsumer(ctx context.Context) {
 }
 
 func (app *App) setRouters() {
-	app.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("API is running"))
+	app.Router.HandleFunc("/order/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./front/index.html")
 	})
+	fs := http.FileServer(http.Dir("./front/"))
+	app.Router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+
+	handler := handlers.NewProductHandler(app.DB, app.Config, &app.Cache)
+	app.Router.HandleFunc("/order/{order_id}", handler.GetProduct).Methods("GET")
 }
 
 func (app *App) loadOrdersFromDB(ctx context.Context) ([]*models.Order, error) {
