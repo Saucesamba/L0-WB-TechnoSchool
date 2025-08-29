@@ -8,10 +8,10 @@
 
 **Основные технологии:**
 
-*   Go:
-*   Kafka:
-*   PostgreSQL:
-*   Docker
+*   Go;
+*   Kafka;
+*   PostgreSQL;
+*   Docker.
 
 Также, постарался придерживаться принципов Clean Architecture.
 
