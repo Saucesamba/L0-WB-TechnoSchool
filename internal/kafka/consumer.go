@@ -19,9 +19,11 @@ type Consumer struct {
 // создает нового консьюмера
 func NewConsumer(cfg config.KafkaConfig, db db.Database) (*Consumer, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{cfg.BrokerAddress},
-		GroupID: cfg.GroupID,
-		Topic:   cfg.Topic,
+		Brokers:        []string{cfg.BrokerAddress},
+		GroupID:        cfg.GroupID,
+		Topic:          cfg.Topic,
+		CommitInterval: 0,
+		MaxAttempts:    3,
 	})
 	return &Consumer{reader: reader, db: db}, nil
 }

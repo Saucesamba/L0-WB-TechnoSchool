@@ -69,25 +69,32 @@
     <input type="text" id="orderId" name="orderId">
     <button onclick="getOrder()">Get Order</button>
 </div>
+<div id="request-time"></div>
+<div id="order-details"></div>
 
-<div id="order-details">
-</div>
 <script>
     async function getOrder() {
         const orderId = document.getElementById('orderId').value;
         const url = `http://localhost:8080/order/${orderId}`;
+        const startTime = performance.now(); // Замеряем время перед запросом
 
         try {
             const response = await fetch(url);
             if (!response.ok) {
                 document.getElementById('order-details').innerText = `Error: ${response.statusText}`;
-                return;
+                document.getElementById('order-details').classList.add('error');
+            } else {
+                const data = await response.json();
+                document.getElementById('order-details').innerText = JSON.stringify(data, null, 2);
+                document.getElementById('order-details').classList.remove('error');
             }
-
-            const data = await response.json();
-            document.getElementById('order-details').innerText = JSON.stringify(data, null, 2);
         } catch (error) {
             document.getElementById('order-details').innerText = `Error: ${error}`;
+            document.getElementById('order-details').classList.add('error');
+        } finally {
+            const endTime = performance.now();
+            const requestTime = endTime - startTime;
+            document.getElementById('request-time').innerText = `Request time: ${requestTime.toFixed(2)} ms`;
         }
     }
 </script>
