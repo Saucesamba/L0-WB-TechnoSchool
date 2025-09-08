@@ -108,6 +108,10 @@ func main() {
 		}
 		orders[i].Delivery = Delivery{}
 		faker.FakeData(&orders[i].Delivery)
+		sb := strings.Builder{}
+		sb.WriteString("+")
+		sb.WriteString(orders[i].Delivery.Phone)
+		orders[i].Delivery.Phone = sb.String()
 		am := fakedig{}
 		faker.FakeData(&am)
 

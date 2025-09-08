@@ -52,6 +52,9 @@ func (c *Consumer) ProcessMessage(ctx context.Context, msg kafka.Message) error 
 		return fmt.Errorf("failed to unmarshal message: %w", err)
 	}
 	log.Printf("Received order: %s", order.OrderUID)
+	if err = ValidData(&order); err != nil {
+		return fmt.Errorf("failed to validate order: %w", err)
+	}
 
 	err = c.db.CreateOrder(ctx, &order)
 	if err != nil {
